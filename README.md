@@ -4,7 +4,7 @@
 
 With a bare repo, every branch lives in its own folder and no checkout is "the" repo, so you start a task by creating a folder instead of switching branches. This guide sets up that layout and one command, `git wt`, with the subcommands `clone`, `add` and `delete` to manage it.
 
-```
+```text
 ~/projects/project-xxxx/
 ├── .bare/            # bare clone: all history and config
 ├── .git              # file containing: gitdir: ./.bare
@@ -38,6 +38,7 @@ You need git 2.48 or newer and bash. Check with `git --version`.
      mkdir -p ~/.local/bin
      export PATH="$HOME/.local/bin:$PATH"
      ```
+
    - Windows (Git for Windows): create the folder `%USERPROFILE%\.local\bin` and add it to your user `PATH` (Start menu, "Edit environment variables for your account"), then open a new Git Bash window. `chmod +x`, mentioned in the next section, is not needed.
 
 ## Install the commands
@@ -66,7 +67,7 @@ On Windows (Git for Windows), copying the file into `%USERPROFILE%\.local\bin` i
 
 ### git wt clone
 
-Clones a repo in the bare layout. The folder name defaults to the repo name; the default branch gets its own worktree and tracks `origin`. It also sets `worktree.useRelativePaths`, so worktrees link to `.bare` with relative paths and keep working if the project folder is mounted at a different path (container, VM, WSL). For a repo cloned before this option existed, run `git config worktree.useRelativePaths true` and then `git worktree repair --relative-paths` from the project folder.
+Clones a repo in the bare layout. The folder name defaults to the repo name; the default branch gets its own worktree and tracks `origin`. It also sets `worktree.useRelativePaths`, so worktrees link to `.bare` with relative paths and keep working if the project folder is mounted at a different path (container, VM, WSL).
 
 ### git wt add
 
