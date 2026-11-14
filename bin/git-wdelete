@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ $# -ge 1 ] || { echo "usage: git wdelete <branch>" >&2; exit 1; }
+root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+cd "$root"
+
+git show-ref --verify --quiet "refs/heads/$1" || { echo "error: branch '$1' does not exist" >&2; exit 1; }
+
+target=$(git rev-parse --abbrev-ref "$1@{upstream}" 2>/dev/null || echo HEAD)
+git merge-base --is-ancestor "$1" "$target" || {
+  echo "error: '$1' is not fully merged into $target; nothing was removed" >&2
+  exit 1
+}
+
+git worktree remove "${1//\//-}"
+git branch -d "$1"

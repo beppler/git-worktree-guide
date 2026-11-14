@@ -44,71 +44,47 @@ You need git 2.48 or newer and bash. Check with `git --version`.
 
 ## Install the commands
 
-Git treats any executable named `git-<name>` on your `PATH` as the subcommand `git <name>`. Create the three files below in `~/.local/bin`, then run `chmod +x ~/.local/bin/git-wclone ~/.local/bin/git-wadd ~/.local/bin/git-wdelete`.
+Git treats any executable named `git-<name>` on your `PATH` as the subcommand `git <name>`. The three scripts live in this repository, in [`bin/`](bin/):
+
+| Script | Command |
+| --- | --- |
+| [`bin/git-wclone`](bin/git-wclone) | `git wclone` |
+| [`bin/git-wadd`](bin/git-wadd) | `git wadd` |
+| [`bin/git-wdelete`](bin/git-wdelete) | `git wdelete` |
+
+Clone this repository, then copy or link the scripts into `~/.local/bin` and make them executable:
+
+```bash
+git clone <this-repo-url>
+cp <this-repo>/bin/git-w* ~/.local/bin/
+chmod +x ~/.local/bin/git-wclone ~/.local/bin/git-wadd ~/.local/bin/git-wdelete
+```
+
+Or symlink them, so updates from this repo show up immediately:
+
+```bash
+ln -s <this-repo>/bin/git-wclone ~/.local/bin/git-wclone
+ln -s <this-repo>/bin/git-wadd ~/.local/bin/git-wadd
+ln -s <this-repo>/bin/git-wdelete ~/.local/bin/git-wdelete
+```
+
+On Windows (Git for Windows), copying the files into `%USERPROFILE%\.local\bin` is enough; `chmod +x` is not needed.
 
 ### git-wclone
 
-Clones a repo in the bare layout. The folder name defaults to the repo name; the default branch gets its own worktree and tracks `origin`. It also sets `worktree.useRelativePaths`, so worktrees link to `.bare` with relative paths and keep working if the project folder is mounted at a different path (container, VM, WSL). For a repo cloned before this option existed, run `git config worktree.useRelativePaths true` and then `git worktree repair --relative-paths` from the project folder.
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-[ $# -ge 1 ] || { echo "usage: git wclone <url> [folder]" >&2; exit 1; }
-name=${2:-$(basename "$1" .git)}
-mkdir "$name"
-cd "$name"
-git clone --bare "$1" .bare
-echo "gitdir: ./.bare" > .git
-git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-git config push.autoSetupRemote true
-git config worktree.useRelativePaths true
-git fetch origin
-branch=$(git symbolic-ref --short HEAD)
-git branch --set-upstream-to="origin/$branch" "$branch"
-git worktree add "$branch" "$branch"
-```
+Clones a repo in the bare layout. The folder name defaults to the repo name; the default branch gets its own worktree and tracks `origin`. It also sets `worktree.useRelativePaths`, so worktrees link to `.bare` with relative paths and keep working if the project folder is mounted at a different path (container, VM, WSL). For a repo cloned before this option existed, run `git config worktree.useRelativePaths true` and then `git worktree repair --relative-paths` from the project folder. See [`bin/git-wclone`](bin/git-wclone).
 
 ### git-wadd
 
 Creates a branch and its worktree next to the others. A slash in the branch name becomes a dash in the folder name, so `feature/login` lives in `feature-login/`. Run it from the project root or from inside any worktree.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-[ $# -ge 1 ] || { echo "usage: git wadd <branch> [base]" >&2; exit 1; }
-common=$(git rev-parse --path-format=absolute --git-common-dir)
-root=$(dirname "$common")
-base=${2:-$(git --git-dir="$common" symbolic-ref --short HEAD)}
-git fetch origin
-git worktree add --no-track -b "$1" "$root/${1//\//-}" "origin/$base"
-```
-
-The base branch is detected automatically: a bare clone's own `HEAD` points at the remote's default branch, and the script reads it from there. Pass a second argument to branch from something else, for example `git wadd fix-x develop`. `--no-track` keeps the new branch from tracking its base; the first `git push` creates and tracks `origin/<branch>` (thanks to `push.autoSetupRemote`). If the remote's default branch is later renamed, point the bare repo at the new name once: `git --git-dir=.bare symbolic-ref HEAD refs/heads/<new-name>`.
+The base branch is detected automatically: a bare clone's own `HEAD` points at the remote's default branch, and the script reads it from there. Pass a second argument to branch from something else, for example `git wadd fix-x develop`. `--no-track` keeps the new branch from tracking its base; the first `git push` creates and tracks `origin/<branch>` (thanks to `push.autoSetupRemote`). If the remote's default branch is later renamed, point the bare repo at the new name once: `git --git-dir=.bare symbolic-ref HEAD refs/heads/<new-name>`. See [`bin/git-wadd`](bin/git-wadd).
 
 ### git-wdelete
 
 Removes the worktree folder and deletes the branch. The final `git branch -d` is only a second safety net: the script first checks that the branch is merged (into its upstream, or into the default branch if it has none), so an unmerged branch leaves the folder untouched.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-[ $# -ge 1 ] || { echo "usage: git wdelete <branch>" >&2; exit 1; }
-root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-cd "$root"
-
-git show-ref --verify --quiet "refs/heads/$1" || { echo "error: branch '$1' does not exist" >&2; exit 1; }
-
-target=$(git rev-parse --abbrev-ref "$1@{upstream}" 2>/dev/null || echo HEAD)
-git merge-base --is-ancestor "$1" "$target" || {
-  echo "error: '$1' is not fully merged into $target; nothing was removed" >&2
-  exit 1
-}
-
-git worktree remove "${1//\//-}"
-git branch -d "$1"
-```
-
-The last two scripts find the project root through the shared git directory (`.bare`), which is why they work from anywhere inside the project.
+The last two scripts find the project root through the shared git directory (`.bare`), which is why they work from anywhere inside the project. See [`bin/git-wdelete`](bin/git-wdelete).
 
 ## Daily workflow
 
