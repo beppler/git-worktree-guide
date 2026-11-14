@@ -1,4 +1,4 @@
-# Git worktrees with a bare repo: setup and daily use
+# Git worktrees with a bare repo
 
 ## Overview
 
