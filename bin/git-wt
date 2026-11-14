@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "usage: git wt clone <url> [folder]" >&2
+  echo "       git wt add <branch> [base]" >&2
+  echo "       git wt delete <branch>" >&2
+  exit 1
+}
+
+cmd_clone() {
+  [ $# -ge 1 ] || { echo "usage: git wt clone <url> [folder]" >&2; exit 1; }
+  name=${2:-$(basename "$1" .git)}
+  mkdir "$name"
+  cd "$name"
+  git clone --bare "$1" .bare
+  echo "gitdir: ./.bare" > .git
+  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+  git config push.autoSetupRemote true
+  git config worktree.useRelativePaths true
+  git fetch origin
+  branch=$(git symbolic-ref --short HEAD)
+  git branch --set-upstream-to="origin/$branch" "$branch"
+  git worktree add "$branch" "$branch"
+}
+
+cmd_add() {
+  [ $# -ge 1 ] || { echo "usage: git wt add <branch> [base]" >&2; exit 1; }
+  common=$(git rev-parse --path-format=absolute --git-common-dir)
+  root=$(dirname "$common")
+  base=${2:-$(git --git-dir="$common" symbolic-ref --short HEAD)}
+  git fetch origin
+  git worktree add --no-track -b "$1" "$root/${1//\//-}" "origin/$base"
+}
+
+cmd_delete() {
+  [ $# -ge 1 ] || { echo "usage: git wt delete <branch>" >&2; exit 1; }
+  root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+  cd "$root"
+
+  git show-ref --verify --quiet "refs/heads/$1" || { echo "error: branch '$1' does not exist" >&2; exit 1; }
+
+  target=$(git rev-parse --abbrev-ref "$1@{upstream}" 2>/dev/null || echo HEAD)
+  git merge-base --is-ancestor "$1" "$target" || {
+    echo "error: '$1' is not fully merged into $target; nothing was removed" >&2
+    exit 1
+  }
+
+  git worktree remove "${1//\//-}"
+  git branch -d "$1"
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1; shift
+
+case "$cmd" in
+  clone)  cmd_clone "$@" ;;
+  add)    cmd_add "$@" ;;
+  delete) cmd_delete "$@" ;;
+  *)      usage ;;
+esac

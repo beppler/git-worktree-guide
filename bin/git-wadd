@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-[ $# -ge 1 ] || { echo "usage: git wadd <branch> [base]" >&2; exit 1; }
-common=$(git rev-parse --path-format=absolute --git-common-dir)
-root=$(dirname "$common")
-base=${2:-$(git --git-dir="$common" symbolic-ref --short HEAD)}
-git fetch origin
-git worktree add --no-track -b "$1" "$root/${1//\//-}" "origin/$base"
