@@ -31,7 +31,7 @@ The commands:
 
 ## One-time setup
 
-You need git 2.37 or newer and bash. Check with `git --version`.
+You need git 2.48 or newer and bash. Check with `git --version`.
 
 1. Create a folder for the commands and put it on your `PATH`:
    - Linux and macOS: create the folder, add the `export` line to `~/.zshrc` or `~/.bashrc`, then open a new terminal:
@@ -48,7 +48,7 @@ Git treats any executable named `git-<name>` on your `PATH` as the subcommand `g
 
 ### git-wclone
 
-Clones a repo in the bare layout. The folder name defaults to the repo name; the default branch gets its own worktree and tracks `origin`.
+Clones a repo in the bare layout. The folder name defaults to the repo name; the default branch gets its own worktree and tracks `origin`. It also sets `worktree.useRelativePaths`, so worktrees link to `.bare` with relative paths and keep working if the project folder is mounted at a different path (container, VM, WSL). For a repo cloned before this option existed, run `git config worktree.useRelativePaths true` and then `git worktree repair --relative-paths` from the project folder.
 
 ```bash
 #!/usr/bin/env bash
@@ -61,6 +61,7 @@ git clone --bare "$1" .bare
 echo "gitdir: ./.bare" > .git
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 git config push.autoSetupRemote true
+git config worktree.useRelativePaths true
 git fetch origin
 branch=$(git symbolic-ref --short HEAD)
 git branch --set-upstream-to="origin/$branch" "$branch"
@@ -218,7 +219,7 @@ Commit these files to the repo so every worktree has them. A config file in the 
 | No `origin/*` branches after a bare clone | The fetch refspec is missing. Run `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"` then `git fetch origin`. `git wclone` does this for you. |
 | `'main' is already checked out at ...` | A branch can live in one worktree only. Use another worktree, or create a new branch with `git wadd`. |
 | `git push` says there is no upstream | Set `git config push.autoSetupRemote true` in that repo (git wclone does this for you), or push once with `git push -u origin <branch>`. |
-| `unknown option: --path-format` | Your git is older than 2.37. Upgrade git. |
+| `unknown option: --path-format` | Your git is older than 2.48. Upgrade git. |
 | `git wdelete` refuses to remove the folder | It has uncommitted changes or untracked files. Commit or stash them (`git stash -u` includes untracked files), or force with `git worktree remove --force <folder>`. |
 | `git wdelete` refuses to delete the branch | The branch is not merged. Merge it first, or delete it on purpose with `git branch -D <branch>`. |
 | A worktree folder was deleted by hand | Run `git worktree prune`. |
