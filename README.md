@@ -1,7 +1,5 @@
 # Git worktrees with a bare repo: setup and daily use
 
-Nov 14, 2026 · @Carlos Beppler
-
 ## Overview
 
 With a bare repo, every branch lives in its own folder and no checkout is "the" repo, so you start a task by creating a folder instead of switching branches. This guide sets up that layout and three small commands to manage it: `git wclone`, `git wadd` and `git wdelete`.
