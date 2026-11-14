@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ $# -ge 1 ] || { echo "usage: git wclone <url> [folder]" >&2; exit 1; }
+name=${2:-$(basename "$1" .git)}
+mkdir "$name"
+cd "$name"
+git clone --bare "$1" .bare
+echo "gitdir: ./.bare" > .git
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+git config push.autoSetupRemote true
+git config worktree.useRelativePaths true
+git fetch origin
+branch=$(git symbolic-ref --short HEAD)
+git branch --set-upstream-to="origin/$branch" "$branch"
+git worktree add "$branch" "$branch"
