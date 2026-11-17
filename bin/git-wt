@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   echo "usage: git wt clone <url> [folder]" >&2
   echo "       git wt add <branch> [base]" >&2
-  echo "       git wt delete <branch>" >&2
+  echo "       git wt remove <branch>" >&2
   exit 1
 }
 
@@ -33,8 +33,8 @@ cmd_add() {
   git worktree add --no-track -b "$1" "$root/${1//\//-}" "origin/$base"
 }
 
-cmd_delete() {
-  [ $# -ge 1 ] || { echo "usage: git wt delete <branch>" >&2; exit 1; }
+cmd_remove() {
+  [ $# -ge 1 ] || { echo "usage: git wt remove <branch>" >&2; exit 1; }
   root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
   cd "$root"
 
@@ -56,6 +56,6 @@ cmd=$1; shift
 case "$cmd" in
   clone)  cmd_clone "$@" ;;
   add)    cmd_add "$@" ;;
-  delete) cmd_delete "$@" ;;
+  remove) cmd_remove "$@" ;;
   *)      usage ;;
 esac

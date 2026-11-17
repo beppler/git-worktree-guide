@@ -2,7 +2,7 @@
 
 ## Overview
 
-With a bare repo, every branch lives in its own folder and no checkout is "the" repo, so you start a task by creating a folder instead of switching branches. This guide sets up that layout and one command, `git wt`, with the subcommands `clone`, `add` and `delete` to manage it.
+With a bare repo, every branch lives in its own folder and no checkout is "the" repo, so you start a task by creating a folder instead of switching branches. This guide sets up that layout and one command, `git wt`, with the subcommands `clone`, `add` and `remove` to manage it.
 
 ```text
 ~/projects/project-xxxx/
@@ -25,7 +25,7 @@ The commands:
 | --- | --- |
 | `git wt clone <url> [folder]` | Clones the repo in this layout and creates the default-branch worktree |
 | `git wt add <branch> [base]` | Creates a new branch and worktree from `origin/<base>` (default: the remote's default branch) |
-| `git wt delete <branch>` | Removes the worktree folder and deletes the branch (only if merged) |
+| `git wt remove <branch>` | Removes the worktree folder and removes the branch (only if merged) |
 
 ## One-time setup
 
@@ -47,7 +47,7 @@ Git treats any executable named `git-<name>` on your `PATH` as the subcommand `g
 
 | Script | Command |
 | --- | --- |
-| [`bin/git-wt`](bin/git-wt) | `git wt clone`, `git wt add`, `git wt delete` |
+| [`bin/git-wt`](bin/git-wt) | `git wt clone`, `git wt add`, `git wt remove` |
 
 Clone this repository, then copy or link the script into `~/.local/bin` and make it executable:
 
@@ -75,11 +75,11 @@ Creates a branch and its worktree next to the others. A slash in the branch name
 
 The base branch is detected automatically: a bare clone's own `HEAD` points at the remote's default branch, and the script reads it from there. Pass a second argument to branch from something else, for example `git wt add fix-x develop`. `--no-track` keeps the new branch from tracking its base; the first `git push` creates and tracks `origin/<branch>` (thanks to `push.autoSetupRemote`). If the remote's default branch is later renamed, point the bare repo at the new name once: `git --git-dir=.bare symbolic-ref HEAD refs/heads/<new-name>`.
 
-### git wt delete
+### git wt remove
 
-Removes the worktree folder and deletes the branch. The final `git branch -d` is only a second safety net: the script first checks that the branch is merged (into its upstream, or into the default branch if it has none), so an unmerged branch leaves the folder untouched.
+Removes the worktree folder and removes the branch. The final `git branch -d` is only a second safety net: the script first checks that the branch is merged (into its upstream, or into the default branch if it has none), so an unmerged branch leaves the folder untouched.
 
-Both `add` and `delete` find the project root through the shared git directory (`.bare`), which is why they work from anywhere inside the project.
+Both `add` and `remove` find the project root through the shared git directory (`.bare`), which is why they work from anywhere inside the project.
 
 ## Daily workflow
 
@@ -95,8 +95,9 @@ cd devca/main
 2. Start a task from the project root or from any worktree:
 
 ```bash
+# from main/; adjust to where you are
 git wt add feature/login
-cd ../feature-login      # from main/; adjust to where you are
+cd ../feature-login
 ```
 
 3. Work as usual. The first push creates the remote branch:
@@ -109,13 +110,13 @@ git push
 4. After the pull request is merged, clean up from anywhere in the project:
 
 ```bash
-git wt delete feature/login
+git wt remove feature/login
 ```
 
 5. Keep `main/` current whenever you like:
 
 ```bash
-cd ~/projects/devca/main && git pull
+cd main && git pull
 ```
 
 Useful built-in commands:
@@ -123,7 +124,7 @@ Useful built-in commands:
 | Command | Use |
 | --- | --- |
 | `git worktree list` | Show every worktree and its branch |
-| `git worktree prune` | Forget worktrees whose folder was deleted by hand |
+| `git worktree prune` | Forget worktrees whose folder was removed by hand |
 | `git fetch origin` | Update `origin/*` for all worktrees at once |
 
 A branch can be checked out in only one worktree at a time, so `git switch` inside a worktree only works for branches no other folder is using.
@@ -147,16 +148,6 @@ git push
 - A plain `git push` creates `origin/<branch>` and sets the upstream, because `git wt clone` already set `push.autoSetupRemote` in this repo. For a repo cloned before that, use `git push -u origin <branch>`.
 - After this push, `git wt add` works normally.
 
-On git older than 2.42, create the first commit on GitHub instead (for example by adding a README there), then run this from the project folder:
-
-```bash
-git fetch origin
-git worktree add -b "$branch" "$branch" "origin/$branch"
-git branch --set-upstream-to="origin/$branch" "$branch"
-```
-
-Set `branch` first as above.
-
 ## Working with agents (Claude Code, opencode)
 
 The most reliable way is to create the worktree yourself and start the agent inside it, one agent per worktree. Agents are scoped to the folder they start in, so an agent that starts in `main/` and then moves elsewhere hits permission prompts and path confusion.
@@ -164,14 +155,14 @@ The most reliable way is to create the worktree yourself and start the agent ins
 1. `git wt add fix-login`
 2. `cd fix-login && claude` (or `opencode`), ideally in its own terminal tab or tmux window.
 3. Let the agent commit and push; review and merge through a pull request.
-4. You run `git wt delete`. Do not give agents that command, because it deletes branches.
+4. You run `git wt remove`. Do not give agents that command, because it removes branches.
 
 ### Rules to commit in AGENTS.md or CLAUDE.md
 
 Commit these files to the repo so every worktree has them. A config file in the project root folder, outside any worktree, is not reliably picked up.
 
 - Work only in the current folder; never touch other worktrees.
-- Never delete branches or worktrees.
+- Never remove branches or worktrees.
 - Commit and push your own branch; do not merge into `main`.
 
 ### Known rough edges (as of November 2026)
@@ -191,9 +182,9 @@ Commit these files to the repo so every worktree has them. A config file in the 
 | `'main' is already checked out at ...` | A branch can live in one worktree only. Use another worktree, or create a new branch with `git wt add`. |
 | `git push` says there is no upstream | Set `git config push.autoSetupRemote true` in that repo (git wt clone does this for you), or push once with `git push -u origin <branch>`. |
 | `unknown option: --path-format` | Your git is older than 2.48. Upgrade git. |
-| `git wt delete` refuses to remove the folder | It has uncommitted changes or untracked files. Commit or stash them (`git stash -u` includes untracked files), or force with `git worktree remove --force <folder>`. |
-| `git wt delete` refuses to delete the branch | The branch is not merged. Merge it first, or delete it on purpose with `git branch -D <branch>`. |
-| A worktree folder was deleted by hand | Run `git worktree prune`. |
+| `git wt remove` refuses to remove the folder | It has uncommitted changes or untracked files. Commit or stash them (`git stash -u` includes untracked files), or force with `git worktree remove --force <folder>`. |
+| `git wt remove` refuses to remove the branch | The branch is not merged. Merge it first, or remove it on purpose with `git branch -D <branch>`. |
+| A worktree folder was removed by hand | Run `git worktree prune`. |
 
 ### Renaming a command
 
@@ -209,10 +200,10 @@ mv ~/.local/bin/git-wt ~/.local/bin/git-worktree-tools
 | --- | --- | --- |
 | Clone a repo in this layout | `git wt clone <url> [folder]` | `~/projects` |
 | Start a task | `git wt add <branch> [base]` | Project root or any worktree |
-| Finish a task | `git wt delete <branch>` | Project root or any worktree |
+| Finish a task | `git wt remove <branch>` | Project root or any worktree |
 | List worktrees | `git worktree list` | Anywhere in the project |
 | Update remote branches | `git fetch origin` | Anywhere in the project |
-| Forget deleted folders | `git worktree prune` | Anywhere in the project |
+| Forget removed folders | `git worktree prune` | Anywhere in the project |
 | Push a new branch | `git push` | Inside that branch's worktree |
 
-Rules of thumb: one worktree per task, launch agents inside the worktree, commit `AGENTS.md` or `CLAUDE.md`, and clean up with `git wt delete` yourself.
+Rules of thumb: one worktree per task, launch agents inside the worktree, commit `AGENTS.md` or `CLAUDE.md`, and clean up with `git wt remove` yourself.
